@@ -1,0 +1,30 @@
+cmake_minimum_required(VERSION 3.16)
+project(AsterionChess LANGUAGES CXX)
+
+option(ASTERION_ENABLE_AVX2 "Compile the evaluation kernel for AVX2-capable CPUs" OFF)
+
+add_executable(asterion src/main.cpp)
+target_compile_features(asterion PRIVATE cxx_std_20)
+set_target_properties(asterion PROPERTIES CXX_EXTENSIONS OFF)
+
+include(CTest)
+if(BUILD_TESTING)
+  add_test(NAME startpos_perft_depth_4 COMMAND asterion perft --depth 4 --verify)
+  add_test(NAME kiwipete_perft_depth_3 COMMAND asterion perft --depth 3 --fen
+    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1")
+  set_tests_properties(kiwipete_perft_depth_3 PROPERTIES PASS_REGULAR_EXPRESSION "97862 nodes")
+endif()
+
+if(MSVC)
+  target_compile_options(asterion PRIVATE /O2 /W4 /permissive-)
+  if(ASTERION_ENABLE_AVX2)
+    target_compile_options(asterion PRIVATE /arch:AVX2)
+    target_compile_definitions(asterion PRIVATE ASTERION_USE_AVX2=1)
+  endif()
+else()
+  target_compile_options(asterion PRIVATE -O3 -Wall -Wextra -Wpedantic)
+  if(ASTERION_ENABLE_AVX2)
+    target_compile_options(asterion PRIVATE -mavx2 -mfma)
+    target_compile_definitions(asterion PRIVATE ASTERION_USE_AVX2=1)
+  endif()
+endif()
